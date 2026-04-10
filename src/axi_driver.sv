@@ -1,0 +1,121 @@
+class axi_driver extends uvm_driver#(axi_transaction);
+	`uvm_component_utils(axi_driver)
+
+	virtual axi_interface.driver_mod intf;
+	axi_transaction packet;
+	
+	extern function new(string name = "axi_driver",uvm_component parent);
+	extern function void build_phase(uvm_phase phase);
+	extern task run_phase(uvm_phase phase);
+	extern task drive();
+	extern task aw_channel(axi_transaction packet);
+	extern task w_channel(axi_transaction packet);
+	extern task b_channel();
+	extern task ar_channel(axi_transaction packet);
+	extern task r_channel(axi_transaction packet);
+	
+endclass
+
+function axi_driver :: new(string name = "axi_driver",uvm_component parent);
+	super.new(name,parent);
+endfunction
+
+function void axi_driver :: build_phase(uvm_phase phase);
+	super.build_phase(phase);
+	
+	if(!(uvm_config_db #(virtual axi_interface.driver_mod) :: get(this,"","vif",intf)))
+		`uvm_error("UNABLE TO GET VIF","PLEASE CHECK THE SET METHOD")
+	
+	packet = axi_transaction::type_id::create("packet",this);
+endfunction
+
+task axi_driver :: run_phase(uvm_phase phase);
+	repeat(1) @(intf.cb_driver);
+	forever begin
+		seq_item_port.get_next_item(packet);
+		drive();
+		seq_item_port.item_done(packet);
+	end
+endtask
+
+task axi_driver::aw_channel(axi_transaction packet);
+		@(intf.cb_driver);
+		intf.cb_driver.awaddr <= packet.awaddr;	
+		intf.cb_driver.awvalid <= 1'b1;
+		intf.cb_driver.awsize <= packet.awsize;
+		intf.cb_driver.awburst <= packet.awburst;
+		do @(intf.cb_driver);
+		while (!intf.cb_driver.awready);
+		intf.cb_driver.awvalid <= 0;	
+endtask
+
+task axi_driver::w_channel(axi_transaction packet);
+		@(intf.cb_driver);
+		intf.cb_driver.wdata <= packet.wdata;	
+		intf.cb_driver.wstrb <= packet.wstrb;	
+		intf.cb_driver.wvalid <= 1'b1;
+		do @(intf.cb_driver);
+		while (!intf.cb_driver.wready);
+		intf.cb_driver.wvalid <= 0;	
+endtask
+
+task axi_driver::b_channel();
+		@(intf.cb_driver);
+		intf.cb_driver.bready <= 1;
+		do @(intf.cb_driver);
+		while (!intf.cb_driver.bvalid);
+		intf.cb_driver.bready <= 0;
+endtask
+	
+task axi_driver::ar_channel(axi_transaction packet);
+		@(intf.cb_driver);
+		intf.cb_driver.araddr <= packet.araddr;	
+		intf.cb_driver.arvalid <= 1'b1;
+		intf.cb_driver.arsize <= packet.arsize;
+		intf.cb_driver.arburst <= packet.arburst;
+		do @(intf.cb_driver);
+		while (!intf.cb_driver.arready);
+		intf.cb_driver.arvalid <= 0;
+
+endtask
+	
+task axi_driver::r_channel(axi_transaction packet);
+		@(intf.cb_driver);
+		intf.cb_driver.rready <= 1;
+		do @(intf.cb_driver);
+		while (!intf.cb_driver.rvalid);
+		packet.rdata = intf.cb_driver.rdata;
+		intf.cb_driver.rready <= 0;
+endtask
+
+task axi_driver :: drive();
+	 @(intf.cb_driver);
+	if(intf.areset)
+		begin
+			intf.cb_driver.awvalid <= 0;
+			intf.cb_driver.wvalid  <= 0;
+			intf.cb_driver.arvalid <= 0;
+			intf.cb_driver.bready  <= 0;
+			intf.cb_driver.rready  <= 0;
+		end
+	else
+	begin
+	if(packet.wr_rd == WRITE)
+		begin
+			fork
+				aw_channel(packet);
+				w_channel(packet);
+			join
+			b_channel();
+		end
+	else
+		begin
+			ar_channel(packet);
+			r_channel(packet);
+		end
+	end
+endtask
+
+
+
+
