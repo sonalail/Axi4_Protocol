@@ -12,13 +12,13 @@ initial
 
  initial
     begin
-      areset = 1;
-    	#10 areset = 0;
+      areset = 0;
+    	#20 areset = 1;
     end
 
-axi_lite_slave #(.ADDR_WIDTH(ADDR_WIDTH),.DATA_WIDTH(DATA_WIDTH)) axi_slave(
-  .aclk    (aclk),
-  .areset  (areset),
+axi_lite_slave #(.ADDRESS_WIDTH(ADDR_WIDTH),.DATA_WIDTH(DATA_WIDTH)) axi_slave(
+  .clk    (aclk),
+  .rst_n  (areset),
 
   .awaddr  (intf_inst.awaddr),
   .awvalid (intf_inst.awvalid),
