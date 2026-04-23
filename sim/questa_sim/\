@@ -30,32 +30,23 @@ function void axi_driver :: build_phase(uvm_phase phase);
 endfunction
 
 task axi_driver :: run_phase(uvm_phase phase);
-  wait(intf.areset);
-  @(intf.cb_driver);
+	`uvm_info("DRIVER_BEFORE","INSIDE RUN_PHASE",UVM_LOW)
 
-  `uvm_info("DRV", "Out of reset", UVM_LOW)
-
-  // INITIALIZE SIGNALS ONCE
-  intf.cb_driver.awvalid <= 0;
-  intf.cb_driver.wvalid  <= 0;
-  intf.cb_driver.arvalid <= 0;
-  intf.cb_driver.bready  <= 1;
-  intf.cb_driver.rready  <= 1;
-
-  forever begin
-    seq_item_port.get_next_item(packet);
-	$display("Inside forver begin");
-    drive();   
-	$display("After drive");
-
-    seq_item_port.item_done();
-  end
-
+	repeat(1) @(intf.cb_driver);
+	`uvm_info("DRIVER_AFTER","INSIDE RUN_PHASE",UVM_LOW)
+	forever begin
+	`uvm_info("DRIVER_FOREVER","INSIDE RUN_PHASE",UVM_LOW)
+		seq_item_port.get_next_item(packet);
+	`uvm_info("DRIVER_AFTER NEXT ITEM","INSIDE RUN_PHASE",UVM_LOW)
+		drive();
+	`uvm_info("DRIVER_AFTER DRIVE","INSIDE RUN_PHASE",UVM_LOW)
+		seq_item_port.item_done();
+	`uvm_info("DRIVER_AFTER ITEM DONE","INSIDE RUN_PHASE",UVM_LOW)
+	end
 endtask
 
 task axi_driver::aw_channel(axi_transaction packet);
 		@(intf.cb_driver);
-		$display("Inside awchannel");
 		intf.cb_driver.awaddr <= packet.awaddr;	
 		intf.cb_driver.awvalid <= 1'b1;
 		intf.cb_driver.awsize <= packet.awsize;
@@ -63,23 +54,19 @@ task axi_driver::aw_channel(axi_transaction packet);
 		do @(intf.cb_driver);
 		while (!intf.cb_driver.awready);
 		intf.cb_driver.awvalid <= 0;	
-		$display("Exiting awchannel");
 endtask
 
 task axi_driver::w_channel(axi_transaction packet);
 		@(intf.cb_driver);
-		$display("Inside wchannel");
 		intf.cb_driver.wdata <= packet.wdata;	
 		intf.cb_driver.wstrb <= packet.wstrb;	
 		intf.cb_driver.wvalid <= 1'b1;
 		do @(intf.cb_driver);
 		while (!intf.cb_driver.wready);
 		intf.cb_driver.wvalid <= 0;	
-		$display("Exiting wchannel");
 endtask
 
 task axi_driver::b_channel();
-		$display("Inside bchannel");
 		@(intf.cb_driver);
 		intf.cb_driver.bready <= 1;
 		do @(intf.cb_driver);
@@ -109,10 +96,19 @@ task axi_driver::r_channel(axi_transaction packet);
 endtask
 
 task axi_driver :: drive();
-	$display("Inside drive task");	
+	 @(intf.cb_driver);
+	if(intf.areset)
+		begin
+			intf.cb_driver.awvalid <= 0;
+			intf.cb_driver.wvalid  <= 0;
+			intf.cb_driver.arvalid <= 0;
+			intf.cb_driver.bready  <= 0;
+			intf.cb_driver.rready  <= 0;
+		end
+	else
+	begin
 	if(packet.wr_rd == WRITE)
 		begin
-			$display("Checked whether write ");
 			fork
 				aw_channel(packet);
 				w_channel(packet);
@@ -124,7 +120,7 @@ task axi_driver :: drive();
 			ar_channel(packet);
 			r_channel(packet);
 		end
-	
+	end
 endtask
 
 

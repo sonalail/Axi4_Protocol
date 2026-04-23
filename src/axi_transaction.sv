@@ -16,7 +16,7 @@ class axi_transaction extends uvm_sequence_item;
 	bit [DATA_WIDTH - 1:0] rdata;
 	axi_resp rresp;
 	
-	axi_write_read wr_rd;
+	rand axi_write_read wr_rd;
 
 	`uvm_object_utils_begin(axi_transaction)
 		`uvm_field_int(awaddr,UVM_ALL_ON)
@@ -33,9 +33,9 @@ class axi_transaction extends uvm_sequence_item;
 		`uvm_field_enum(axi_write_read,wr_rd,UVM_ALL_ON)
 	`uvm_object_utils_end
 
-	constraint awaddr_byte_addressable{awaddr[1:0] == 0;}
+	constraint awaddr_byte_addressable{soft awaddr[1:0] == 0;}
 
-	constraint araddr_byte_addressable{araddr[1:0] == 0;}
+	constraint araddr_byte_addressable{soft araddr[1:0] == 0;}
 
 	constraint wstrb_value{soft wstrb == 4'b1111;}
 
