@@ -6,7 +6,7 @@ cd sim/questa_sim
 # Compilation:  
 make compile top_file=<top_file>
 
-ex: make run top_module=axi_top
+ex: make compile top_file=axi_top
 
 # Simulation:
 make run top_module=<module_name> arg="+UVM_TESTNAME=<testname>"
